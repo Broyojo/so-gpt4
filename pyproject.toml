@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "so-gpt4"
+version = "0.1.0"
+description = ""
+authors = ["Broyojo <dha@xoba.com>"]
+readme = "README.md"
+packages = [{include = "so_gpt4"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+alive-progress = "^3.1.0"
+openai = "^0.27.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
