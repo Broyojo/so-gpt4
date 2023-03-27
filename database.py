@@ -1,6 +1,7 @@
 import concurrent.futures
 import json
 import os
+import random
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
@@ -157,10 +158,7 @@ class Database:
     ) -> "Database":
         db = self()
 
-        cached_posts = []
-
         for post in read_posts(posts_path, total):
-            cached_posts.append(post)
             if (
                 post.creation_date > cutoff_date
                 and post.post_type_id == 1
@@ -171,7 +169,7 @@ class Database:
             ):
                 db.pairs[post.id] = Pair(question=post, answers=[], gpt_answer="")
 
-        for post in alive_it(cached_posts, title="Reading answers..."):
+        for post in read_posts(posts_path, total):
             if (
                 post.creation_date > cutoff_date
                 and post.post_type_id == 2
@@ -223,6 +221,7 @@ class Database:
         for pair in alive_it(self.pairs.values(), title=title):
             if fn(pair):
                 new_db.add_pair(pair)
+        print("Filtered database to", len(new_db.pairs), "pairs")
         return new_db
 
     def filter_by_tags(self, tags: list[str]) -> "Database":
@@ -283,6 +282,14 @@ class Database:
             ),
             num_threads=num_threads,
             title="Making GPT answers...",
+        )
+
+    def random_sample(self, k: int) -> "Database":
+        return Database(
+            {
+                k: self.pairs[k]
+                for k in random.sample(list(self.pairs), min(len(self.pairs), k))
+            }
         )
 
 
