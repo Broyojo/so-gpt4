@@ -16,8 +16,6 @@ from alive_progress import alive_it
 Need to be able to keep the database in memory and apply operations to it
 """
 
-from old.so_gpt4 import Pair
-
 
 @dataclass
 class Post:
@@ -288,13 +286,14 @@ class Database:
         )
 
 
-db = (
-    Database.load_from_posts(
-        posts_path="data/cooking/Posts.xml",
-        total=88706,
-        cutoff_date=datetime(2021, 9, 30),
+if __name__ == "__main__":
+    db = (
+        Database.load_from_posts(
+            posts_path="data/cooking/Posts.xml",
+            total=88706,
+            cutoff_date=datetime(2021, 9, 30),
+        )
+        .filter_by_tags(["pizza", "cheese"])
+        .make_gpt_answers(model_name="gpt-3.5-turbo", num_threads=16)
+        .save("pairs.json", overwrite=True)
     )
-    .filter_by_tags(["bread"])
-    .make_gpt_answers(model_name="gpt-3.5-turbo", num_threads=16)
-    .save("pairs.json", overwrite=True)
-)
