@@ -10,6 +10,9 @@ packages = [{include = "so_gpt4"}]
 python = "^3.11"
 alive-progress = "^3.1.0"
 openai = "^0.27.2"
+markdown = "^3.4.3"
+flask = "^2.2.3"
+sqlalchemy = "^2.0.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

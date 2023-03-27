@@ -9,5 +9,7 @@ class Config:
     total: int
     time_format: str
     pairs_path: str
+    raw_pairs_path: str
     gpt_prompt: str
     gpt_model: str
+    threads: int
