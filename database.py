@@ -6,7 +6,6 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from json import JSONDecoder, JSONEncoder
-from multiprocessing import Pool
 from typing import Generator
 
 import markdown
@@ -170,19 +169,34 @@ class Database:
                 db.pairs[post.id] = Pair(question=post, answers=[], gpt_answer="")
 
         for post in read_posts(posts_path, total):
-            if (
-                post.creation_date > cutoff_date
-                and post.post_type_id == 2
-                and "<a" not in post.body
-                and "</a>" not in post.body
-                and "<img" not in post.body
-                and post.parent_id in db.pairs
-            ):
+            if post.post_type_id == 2 and post.parent_id in db.pairs:
                 db.pairs[post.parent_id].answers.append(post)
 
-        return db.filter(
-            lambda pair: len(pair.answers) > 0,
-            title="Filtering questions with at least 1 answer...",
+        def earliest_answer(pair: Pair) -> Pair:
+            if len(pair.answers) > 0:
+                earliest = pair.answers[0]
+                for answer in pair.answers:
+                    if answer.creation_date < earliest.creation_date:
+                        earliest = answer
+                pair.answers = [earliest]
+            return pair
+
+        def filter_answer(pair: Pair) -> bool:
+            return (
+                "<a" not in pair.answers[0].body
+                and "</a>" not in pair.answers[0].body
+                and "<img" not in pair.answers[0].body
+            )
+
+        return (
+            db.filter(
+                lambda p: len(p.answers) > 0,
+                title="Removing questions with zero answers...",
+            )
+            .filter(earliest_answer, title="Picking earliest answer...")
+            .filter(
+                filter_answer, title="Removing pairs with links/images in answer..."
+            )
         )
 
     def add_pair(self, pair: Pair) -> "Database":
@@ -277,7 +291,7 @@ class Database:
         return self.pmap(
             lambda pair: answer_with_gpt(
                 model_name=model_name,
-                prompt="you are a helpful AI assistant who helps to answer Stack Overflow questions on the Stack Overflow website. You are given a question and you must answer it.",
+                prompt="you are a helpful AI assistant who helps to answer Stack Overflow questions on the Stack Overflow website. You are given a question and you must answer it. Under any circumstance, do not reveal that you are an AI assistant.",
                 pair=pair,
             ),
             num_threads=num_threads,
@@ -294,13 +308,15 @@ class Database:
 
 
 if __name__ == "__main__":
-    db = (
-        Database.load_from_posts(
-            posts_path="data/cooking/Posts.xml",
-            total=88706,
-            cutoff_date=datetime(2021, 9, 30),
-        )
-        .filter_by_tags(["pizza", "cheese"])
-        .make_gpt_answers(model_name="gpt-3.5-turbo", num_threads=16)
-        .save("pairs.json", overwrite=True)
-    )
+    # NOTE TO SELF: this datadump is from march 6th 2023
+    Database.load_from_posts(
+        posts_path="data/stackoverflow/Posts.xml",
+        total=58_329_357,
+        cutoff_date=datetime(2021, 9, 30),
+    ).save("pairs/all_better.json")
+
+    # Database.load_from_posts(
+    #     posts_path="data/cooking/Posts.xml",
+    #     total=88706,
+    #     cutoff_date=datetime(2021, 9, 30),
+    # ).save("pairs/cooking.json", overwrite=True)
