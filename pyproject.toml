@@ -13,6 +13,7 @@ openai = "^0.27.2"
 markdown = "^3.4.3"
 flask = "^2.2.3"
 sqlalchemy = "^2.0.7"
+jsonpickle = "^3.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

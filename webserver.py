@@ -1,48 +1,60 @@
-import ast
-import hashlib
-from datetime import datetime
+import random
+import uuid
 
-from flask import Flask, redirect, render_template, request, session, url_for
+import jsonpickle
+from flask import Flask, make_response, redirect, render_template, request, url_for
 
-from database import Database, Pair
+from pair import Pair
+
+with open("pairs/cooking.json", "r") as f:
+    pairs: dict[str, Pair] = jsonpickle.decode(f.read())
+
+
+def get_random_pair(tags):
+    if tags is None:
+        return random.choice(list(pairs.values()))
+    else:
+        return random.choice(
+            [
+                pair
+                for pair in pairs.values()
+                if any(tag.lower() in pair.question.tags for tag in tags)
+            ]
+        )
+
+
+# get existing cookie or create a new one
+def get_user_id():
+    user_id = request.cookies.get("user_id")
+    if user_id is None:
+        user_id = str(uuid.uuid4())
+    return user_id
+
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = hashlib.sha256("haha69420".encode()).digest()
-
-db = Database.load_from_json("pairs.json")
+app.debug = True
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["POST", "GET"])
 def index():
-    if request.method == "GET":
-        language_options = request.values.getlist("option")
-        if len(language_options) != 0:
-            print("language_options", language_options)
-            session["language_options"] = language_options
-            return redirect(url_for("survey"))
-    return render_template("index.html")
-
-
-@app.route("/survey", methods=["GET", "POST"])
-def survey(language_options=None):
-    language_options = session.get("language_options")
-    print("received language options:", language_options)
-    if language_options:
-        if len(language_options) == 1:
-            languages = language_options[0]
+    if request.method == "POST":
+        if request.form.get("consent") == "agree":
+            return redirect(url_for("language_selection"))
         else:
-            languages = ", ".join(
-                language_options[:-1] + ["and " + language_options[-1]]
-            )
-    else:
-        languages = None
-    pairs = db.filter(
-        lambda p: any(
-            [p.has_tags([language_option]) for language_option in language_options]
-        )
-    ).pairs
-    return render_template("survey.html", languages=languages, things=pairs)
+            return render_template("no_consent.html")
+    return render_template("consent_form.html")
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route("/language_selection", methods=["POST", "GET"])
+def language_selection():
+    return render_template("language_selection.html")
+
+
+# @app.route("/task/<languages>")
+# def task(languages):
+#     languages_list = languages.split(",")
+#     pair = get_random_pair(tags=languages_list)
+#     return pair.question.body
+
+
+app.run()

@@ -1,6 +1,5 @@
+old
 data
-json
-html
-*__pycache__*
-.python-version
 pairs
+__pycache__
+.python-version
